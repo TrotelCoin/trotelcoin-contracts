@@ -7,7 +7,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v4.9
 
 contract TrotelCoinIntermediateNFT is ERC721, Ownable {
     IERC20 public trotelCoin;
-    uint256 public holdingRequirement = 50000;
+    uint256 public holdingRequirement = 10000;
     uint256 public tokenIdCounter = 0;
 
     mapping(uint256 => uint256) public trotelSpent;
@@ -26,7 +26,7 @@ contract TrotelCoinIntermediateNFT is ERC721, Ownable {
         emit TrotelCoinUpdated(newTrotelCoinAddress);
     }
 
-    function mint(address to) public onlyOwner {
+    function mint(address to) public {
         require(isEligibleForIntermediateNFT(to), "Not eligible for Intermediate NFT");
         _mint(to, tokenIdCounter);
         tokenIdCounter++;
