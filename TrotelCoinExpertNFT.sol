@@ -28,6 +28,7 @@ contract TrotelCoinExpertNFT is ERC721, Ownable {
 
     function mint(address to) public {
         require(isEligibleForExpertNFT(to), "Not eligible for Expert NFT");
+        require(balanceOf(to) < 1, "Already claimed the NFT");
         _mint(to, tokenIdCounter);
         tokenIdCounter++;
         emit NFTMinted(to, tokenIdCounter, holdingRequirement);
