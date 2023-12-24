@@ -10,28 +10,56 @@ contract TrotelCoinIntermediateNFT is ERC721, Ownable {
     uint256 public holdingRequirement = 10000;
     uint256 public tokenIdCounter = 0;
 
-    mapping(uint256 => uint256) public trotelSpent;
+    mapping(address => bool) public allowedMinters;
+    mapping(address => uint256) public mintLockTimestamp;
 
     constructor(address _trotelCoinAddress) ERC721("TrotelCoin Intermediate", "TCI") {
         trotelCoin = IERC20(_trotelCoinAddress);
+        allowedMinters[msg.sender] = true;
     }
 
     event NFTMinted(address indexed to, uint256 tokenId, uint256 trotelSpent);
     event UserProgressChanged(address indexed user, bool eligible);
     event HoldingRequirementUpdated(uint256 newHoldingRequirement);
     event TrotelCoinUpdated(address newTrotelCoin);
+    event MinterAdded(address minter);
+    event MinterRemoved(address minter);
 
     function setTrotelCoin(address newTrotelCoinAddress) external onlyOwner {
         trotelCoin = IERC20(newTrotelCoinAddress);
         emit TrotelCoinUpdated(newTrotelCoinAddress);
     }
 
+    modifier onlyAllowedMinter() {
+        require(allowedMinters[msg.sender], "Caller is not an allowed minter");
+        _;
+    }
+
+    function addMinter(address _minter) external onlyOwner {
+        allowedMinters[_minter] = true;
+        emit MinterAdded(_minter);
+    }
+
+    function removeMinter(address _minter) external onlyOwner {
+        allowedMinters[_minter] = false;
+        emit MinterRemoved(_minter);
+    }
+
     function mint(address to) public {
         require(isEligibleForIntermediateNFT(to), "Not eligible for Intermediate NFT");
         require(balanceOf(to) < 1, "Already claimed the NFT");
+        require(tx.origin == msg.sender, "Flash loans not allowed");
+
         _mint(to, tokenIdCounter);
         tokenIdCounter++;
+        mintLockTimestamp[msg.sender] = block.timestamp;
         emit NFTMinted(to, tokenIdCounter, holdingRequirement);
+    }
+
+    function mintToAddress(address to) external onlyAllowedMinter {
+        _mint(to, tokenIdCounter);
+        tokenIdCounter++;
+        emit NFTMinted(to, tokenIdCounter, 0);
     }
 
     function isEligibleForIntermediateNFT(address user) public view returns (bool) {
@@ -50,5 +78,10 @@ contract TrotelCoinIntermediateNFT is ERC721, Ownable {
     function setHoldingRequirement(uint256 newRequirement) external onlyOwner {
         holdingRequirement = newRequirement;
         emit HoldingRequirementUpdated(newRequirement);
+    }
+
+    function _transfer(address from, address to, uint256 tokenId) internal override {
+        require(to == address(0), "Transfers not allowed for this NFT");
+        super._transfer(from, to, tokenId);
     }
 }
