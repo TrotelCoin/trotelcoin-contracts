@@ -164,6 +164,10 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         remainingTokens = _remainingTokens;
     }
 
+    function getTotalRewards() public view returns (uint256) {
+        return totalRewards;
+    }
+
     function _authorizeUpgrade(address newImplementation)
         internal
         override
