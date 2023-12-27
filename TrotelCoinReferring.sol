@@ -6,7 +6,9 @@ interface TrotelCoin {
     function balanceOf(address account) external view returns (uint256);
 }
 
-contract ReferralSystem {
+// this is not sufficient in term of security. one can create any wallet he wants to claim the airdrop.
+
+contract TrotelCoinReferralSystem {
     mapping(address => address[]) public referrals;
     mapping(address => uint256) public referralCounts;
 
