@@ -31,7 +31,7 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
     mapping(address => mapping (uint => bool)) public quizzesIdAnsweredPerLearner;
     mapping(address => bool) public admins;
     mapping(address => bool) public isLearner;
-    mapping (uint => bool) public authorizedQuizzesId;
+    mapping (uint => bool) public availableQuizzes;
 
     event RewardsClaimed(address indexed learner, uint256 rewardsClaimed);
     event NewLearnerAdded(address indexed learner);
@@ -67,7 +67,7 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
     }
 
     function authorizeQuizId(uint _quizId) external onlyAdmin {
-        authorizedQuizzesId[_quizId] = true;
+        availableQuizzes[_quizId] = true;
     }
 
     function addLearner(address _learner) public validAddress(_learner) {
@@ -94,12 +94,13 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         return _reward;
     }
 
-    function claimRewards(address _learner, uint _quizzId) external validAddress(_learner) {
+    function claimRewards(address _learner, uint _quizId) external validAddress(_learner) {
+        require(availableQuizzes[_quizId], "Quiz doesn't exist");
         bool _isLearner = isLearner[_learner];
         if (!_isLearner) {
             addLearner(_learner);
         }
-        require(!quizzesIdAnsweredPerLearner[_learner][_quizzId], "Quiz already answered");
+        require(!quizzesIdAnsweredPerLearner[_learner][_quizId], "Quiz already answered");
 
         uint256 remainingRewards = calculateRemainingRewardsPeriod();
         if (remainingRewards <= 0) {
@@ -114,7 +115,7 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         learners[_learner].numberOfQuizzesAnswered++;
         learners[_learner].totalLearnerRewards += rewards;
 
-        quizzesIdAnsweredPerLearner[_learner][_quizzId] = true;
+        quizzesIdAnsweredPerLearner[_learner][_quizId] = true;
         totalQuizzesAnswered++;
         totalRewards += rewards;
 
