@@ -7,13 +7,13 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/
 
 contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
     struct DailyStats {
-        uint256 quizzesAnswered;
+        uint quizzesAnswered;
         uint256 rewards;
     }
 
     struct Learner {
         address learner;
-        uint256 numberOfQuizzesAnswered;
+        uint numberOfQuizzesAnswered;
         uint256 totalLearnerRewards;
     }
 
