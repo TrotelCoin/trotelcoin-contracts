@@ -91,7 +91,7 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         return _reward;
     }
 
-    function matchSecret(string memory _secret) public view onlyAdmin returns (bool) {
+    function matchSecret(string memory _secret) public view returns (bool) {
         return
             keccak256(abi.encodePacked(_secret)) ==
             keccak256(abi.encodePacked(secret));
