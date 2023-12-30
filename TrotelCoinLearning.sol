@@ -70,6 +70,10 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         availableQuizzes[_quizId] = true;
     }
 
+    function unauthorizeQuizId(uint _quizId) external onlyAdmin {
+        availableQuizzes[_quizId] = false;
+    }
+
     function addLearner(address _learner) private validAddress(_learner) {
         require(!isLearner[_learner], "Already learner");
         learners[_learner].learner = _learner;
