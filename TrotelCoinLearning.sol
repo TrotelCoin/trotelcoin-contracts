@@ -11,8 +11,6 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         uint256 rewards;
     }
 
-    // try to save more gas
-
     struct Learner {
         address learner;
         uint256 numberOfQuizzesAnswered;
@@ -20,8 +18,6 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
     }
 
     TrotelCoin public trotelCoin;
-
-    string private secret;
 
     address public owner;
     uint256 public totalQuizzesAnswered;
@@ -35,6 +31,7 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
     mapping(address => mapping (uint => bool)) public quizzesIdAnsweredPerLearner;
     mapping(address => bool) public admins;
     mapping(address => bool) public isLearner;
+    mapping (uint => bool) public authorizedQuizzesId;
 
     event RewardsClaimed(address indexed learner, uint256 rewardsClaimed);
     event NewLearnerAdded(address indexed learner);
@@ -69,6 +66,10 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         _;
     }
 
+    function authorizeQuizId(uint _quizId) external onlyAdmin {
+        authorizedQuizzesId[_quizId] = true;
+    }
+
     function addLearner(address _learner) public validAddress(_learner) {
         require(!isLearner[_learner], "Already learner");
         learners[_learner].learner = _learner;
@@ -93,15 +94,11 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         return _reward;
     }
 
-    function matchSecret(string memory _secret) public view returns (bool) {
-        return
-            keccak256(abi.encodePacked(_secret)) ==
-            keccak256(abi.encodePacked(secret));
-    }
-
-    function claimRewards(address _learner, string memory _secret, uint256 _quizzId) external validAddress(_learner) {
-        require(isLearner[_learner], "Not a learner");
-        require(matchSecret(_secret), "Not allowed to mint");
+    function claimRewards(address _learner, uint _quizzId) external validAddress(_learner) {
+        bool _isLearner = isLearner[_learner];
+        if (!_isLearner) {
+            addLearner(_learner);
+        }
         require(!quizzesIdAnsweredPerLearner[_learner][_quizzId], "Quiz already answered");
 
         uint256 remainingRewards = calculateRemainingRewardsPeriod();
@@ -126,6 +123,7 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         emit RewardsClaimed(_learner, rewards);
     }
 
+
     function addAdmin(address _admin) public onlyOwner {
         admins[_admin] = true;
         emit AdminAdded(_admin);
@@ -144,32 +142,12 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         trotelCoin = TrotelCoin(_newTrotelCoin);
     }
 
-    function setSecret(string memory _secret) public onlyAdmin {
-        secret = _secret;
-    }
-
-    function getSecret() public view onlyAdmin returns (string memory) {
-        return secret;
-    }
-
-    function getNumberOfQuizzesAnswer(address _learner)
-        external
-        view
-        returns (uint256)
-    {
-        return learners[_learner].numberOfQuizzesAnswered;
-    }
-
     function setDailyTokensToDistribute(uint256 _dailyTokensToDistribute) public onlyAdmin {
         dailyTokensToDistribute = _dailyTokensToDistribute;
     }
 
     function setRemainingTokens(uint256 _remainingTokens) public onlyAdmin {
         remainingTokens = _remainingTokens;
-    }
-
-    function getTotalRewards() external view returns (uint256) {
-        return totalRewards;
     }
 
     function _authorizeUpgrade(address newImplementation)
