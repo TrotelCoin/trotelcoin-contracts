@@ -19,6 +19,8 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
 
     TrotelCoin public trotelCoin;
 
+    string private secret; // deleted
+
     address public owner;
     uint256 public totalQuizzesAnswered;
     uint256 public totalRewards;
@@ -31,12 +33,14 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
     mapping(address => mapping (uint => bool)) public quizzesIdAnsweredPerLearner;
     mapping(address => bool) public admins;
     mapping(address => bool) public isLearner;
-    mapping (uint => bool) public availableQuizzes;
 
     event RewardsClaimed(address indexed learner, uint256 rewardsClaimed);
     event NewLearnerAdded(address indexed learner);
     event AdminAdded(address indexed newAdmin);
     event AdminRemoved(address indexed oldAdmin);
+
+    // new variables
+    mapping (uint => bool) public availableQuizzes;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
