@@ -17,21 +17,21 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         uint256 totalLearnerRewards;
     }
 
-    TrotelCoin private trotelCoin;
+    TrotelCoin public trotelCoin;
 
-    address private owner;
-    uint256 private totalQuizzesAnswered;
-    uint256 private totalRewards;
-    uint256 private dailyTokensToDistribute;
-    uint256 private remainingTokens;
-    uint256 private rewardsPeriod;
-    uint256 private rewardsTimestamp;
+    address public owner;
+    uint256 public totalQuizzesAnswered;
+    uint256 public totalRewards;
+    uint256 public dailyTokensToDistribute;
+    uint256 public remainingTokens;
+    uint256 public rewardsPeriod;
+    uint256 public rewardsTimestamp;
 
-    mapping(address => Learner) private learners;
-    mapping(address => mapping (uint => bool)) private quizzesIdAnsweredPerLearner;
-    mapping(address => bool) private admins;
-    mapping(address => bool) private isLearner;
-    mapping (uint => bool) private availableQuizzes;
+    mapping(address => Learner) public learners;
+    mapping(address => mapping (uint => bool)) public quizzesIdAnsweredPerLearner;
+    mapping(address => bool) public admins;
+    mapping(address => bool) public isLearner;
+    mapping (uint => bool) public availableQuizzes;
 
     event RewardsClaimed(address indexed learner, uint256 rewardsClaimed);
     event NewLearnerAdded(address indexed learner);
