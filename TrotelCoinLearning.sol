@@ -11,6 +11,8 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         uint256 rewards;
     }
 
+    // try to save more gas
+
     struct Learner {
         address learner;
         uint256 numberOfQuizzesAnswered;
@@ -97,29 +99,31 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
             keccak256(abi.encodePacked(secret));
     }
 
-    function claimRewards(address _learner, string memory _secret, uint256 _quizzId)
-        external
-        validAddress(_learner)
-    {
-        if (!isLearner[_learner]) {
-            addLearner(_learner);
-        }
+    function claimRewards(address _learner, string memory _secret, uint256 _quizzId) external validAddress(_learner) {
+        require(isLearner[_learner], "Not a learner");
         require(matchSecret(_secret), "Not allowed to mint");
         require(!quizzesIdAnsweredPerLearner[_learner][_quizzId], "Quiz already answered");
-        require(tx.origin == _learner, "Only learner can claim rewards");
-        if (calculateRemainingRewardsPeriod() <= 0) {
+
+        uint256 remainingRewards = calculateRemainingRewardsPeriod();
+        if (remainingRewards <= 0) {
             remainingTokens = dailyTokensToDistribute / 50;
         }
-        uint256 _rewards = calculateRewards();
+
+        uint256 rewards = calculateRewards();
         rewardsTimestamp = block.timestamp;
-        trotelCoin.mint(_learner, _rewards);
-        learners[_learner].numberOfQuizzesAnswered += 1;
-        learners[_learner].totalLearnerRewards += _rewards;
+
+        trotelCoin.mint(_learner, rewards);
+
+        learners[_learner].numberOfQuizzesAnswered++;
+        learners[_learner].totalLearnerRewards += rewards;
+
         quizzesIdAnsweredPerLearner[_learner][_quizzId] = true;
-        totalQuizzesAnswered += 1;
-        totalRewards += _rewards;
-        remainingTokens -= _rewards / 50;
-        emit RewardsClaimed(_learner, _rewards);
+        totalQuizzesAnswered++;
+        totalRewards += rewards;
+
+        remainingTokens -= rewards / 50;
+
+        emit RewardsClaimed(_learner, rewards);
     }
 
     function addAdmin(address _admin) public onlyOwner {
