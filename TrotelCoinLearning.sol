@@ -93,7 +93,7 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         }
     }
 
-    function calculateRewards() private view returns (uint256) {
+    function calculateRewards() public view returns (uint256) {
         uint256 minReward = remainingTokens / 10; // 10%
         uint256 maxReward = remainingTokens / 4;  // 25%
         uint256 _reward = (minReward + uint256(keccak256(abi.encodePacked(block.timestamp))) % (maxReward - minReward + 1));
