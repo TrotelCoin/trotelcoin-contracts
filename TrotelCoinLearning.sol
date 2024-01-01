@@ -85,7 +85,7 @@ contract TrotelCoinLearning is Initializable, UUPSUpgradeable {
         emit NewLearnerAdded(_learner);
     }
 
-    function calculateRemainingRewardsPeriod() private view returns (uint256) {
+    function calculateRemainingRewardsPeriod() public view returns (uint256) {
         if (block.timestamp >= rewardsTimestamp + rewardsPeriod) {
             return 0;
         } else {
