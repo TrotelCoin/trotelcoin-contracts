@@ -54,7 +54,7 @@ contract TrotelCoinIntermediateNFTV2 is ERC721, Ownable {
     }
 
     function mint(address to) public {
-        require(isEligibleForExpertNFT(to), "Not eligible for Intermediate NFT");
+        require(isEligibleForNFT(to), "Not eligible for the NFT");
         require(balanceOf(to) < 1, "Already claimed the NFT");
         require(trotelCoin.allowance(msg.sender, address(this)) >= holdingRequirement, "Contract not approved to spend tokens");
         
