@@ -18,7 +18,7 @@ contract TrotelCoinExpertNFTV2 is ERC721, Ownable {
     constructor(address _trotelCoinAddress) ERC721("TrotelCoin Expert", "TCE") {
         trotelCoin = TrotelCoinV2(_trotelCoinAddress);
         holdingRequirement = 50000 * 10 ** trotelCoin.decimals();
-        allowedMinters[msg.sender] = true;
+        allowedMinters[daoAddress] = true;
     }
 
     event NFTMinted(address indexed to, uint256 tokenId, uint256 trotelSpent);

@@ -18,7 +18,7 @@ contract TrotelCoinIntermediateNFTV2 is ERC721, Ownable {
     constructor(address _trotelCoinAddress) ERC721("TrotelCoin Intermediate", "TCI") {
         trotelCoin = TrotelCoinV2(_trotelCoinAddress);
         holdingRequirement = 10000 * 10 ** trotelCoin.decimals();
-        allowedMinters[msg.sender] = true;
+        allowedMinters[daoAddress] = true;
     }
 
     event NFTMinted(address indexed to, uint256 tokenId, uint256 trotelSpent);
