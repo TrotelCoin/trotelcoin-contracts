@@ -264,6 +264,14 @@ contract TrotelCoinShop is
         return totalItems;
     }
 
+    function getCategoryInformations(uint256 _categoryId) external view returns (Category memory) {
+        return categories[_categoryId];
+    }
+
+    function getItemInformations(uint256 _itemId) external view returns (Item memory) {
+        return items[_itemId];
+    }
+
     function _authorizeUpgrade(address newImplementation)
         internal
         override
