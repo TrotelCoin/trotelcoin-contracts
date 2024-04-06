@@ -272,6 +272,11 @@ contract TrotelCoinShop is
         return items[_itemId];
     }
 
+    function getItemQuantity(address _address, uint256 _itemId) external view returns (uint256) {
+        require(_itemId > 0 && _itemId <= totalItems, "Invalid item id");
+        return inventory[_address][_itemId];
+    }
+
     function _authorizeUpgrade(address newImplementation)
         internal
         override
