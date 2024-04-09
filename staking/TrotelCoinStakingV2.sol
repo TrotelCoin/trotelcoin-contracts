@@ -5,7 +5,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v4.9
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v4.9/contracts/utils/math/SafeMath.sol";
 import "https://github.com/TrotelCoin/trotelcoin-contracts/blob/main/token/TrotelCoinV2.sol";
 
-contract TrotelCoinStaking is AccessControl {
+contract TrotelCoinStakingV2 is AccessControl {
     using SafeMath for uint256;
 
     struct UserStaking {
