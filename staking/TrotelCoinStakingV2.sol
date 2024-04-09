@@ -10,73 +10,97 @@ contract TrotelCoinStakingV2 is AccessControl {
 
     struct UserStaking {
         uint256 totalAmount;
+        uint256 startTime;
+        uint32 duration;
         uint256[] amounts;
         uint256[] times;
-        uint256[] durations;
-        uint256 startTime;
     }
 
     mapping(address => UserStaking) public stakings;
 
     TrotelCoinV2 private trotelToken;
 
-    mapping(uint256 => uint256) private rewards;
+    struct Reward {
+        uint256 apr;
+        bool exists;
+    }
 
-    uint256[] public durations = [30 days, 91 days, 182 days, 365 days, 730 days, 1460 days];
+    mapping(uint256 => Reward) private rewards;
 
-    event Staked(address indexed user, uint256 amount, uint256 duration);
+    uint256[] public durations = [
+        30 days,
+        91 days,
+        182 days,
+        365 days,
+        730 days,
+        1460 days
+    ];
+
+    uint256 multiplierVotingPower;
+
+    event Staked(address indexed user, uint256 amount, uint32 duration);
+    event IncreasedStaking(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount, uint256 reward);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(
-        address _defaultAdmin,
-        address _trotelToken
-    ) {
+    constructor(address _defaultAdmin, address _trotelToken) {
         _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
 
         trotelToken = TrotelCoinV2(_trotelToken);
 
-        rewards[durations[0]] = 3;   // 3%
-        rewards[durations[1]] = 6;   // 6%
-        rewards[durations[2]] = 10;  // 10%
-        rewards[durations[3]] = 15;  // 15%
-        rewards[durations[4]] = 20;  // 20%
-        rewards[durations[5]] = 30;  // 30%
+        rewards[30 days] = Reward(3, true);
+        rewards[91 days] = Reward(6, true);
+        rewards[182 days] = Reward(10, true);
+        rewards[365 days] = Reward(15, true);
+        rewards[730 days] = Reward(20, true);
+        rewards[1460 days] = Reward(30, true);
+
+        multiplierVotingPower = 2;
     }
 
-    modifier isValidDuration(uint256 duration) {
-        bool isValid;
-        for (uint256 i = 0; i < durations.length; i++) {
-            if (durations[i] == duration) {
-                isValid = true;
-                break;
-            }
-        }
-        require(isValid, "Invalid duration");
+    modifier isValidDuration(uint32 duration) {
+        require(rewards[duration].exists, "Duree invalide");
         _;
     }
 
-    function calculateReward(uint256 amount, uint256 duration, uint256 stakingTime) internal view returns (uint256) {
-        uint256 reward = amount.mul(rewards[duration]).mul(stakingTime).div(365 days).div(100);
-        return reward;
+    function calculateReward(
+        uint256 amount,
+        uint32 duration,
+        uint256 stakingTime
+    ) internal view returns (uint256) {
+        uint256 apr = rewards[duration].apr;
+        return amount.mul(apr).mul(stakingTime).div(365 days).div(100);
     }
 
-    function stake(uint256 amount, uint256 duration) external isValidDuration(duration) {
+    function getUserTimeLeft(address user) internal view returns (uint256) {
+        UserStaking storage userStaking = stakings[user];
+        uint256 endTime = userStaking.startTime.add(userStaking.duration);
+
+        if (block.timestamp < endTime) {
+            return endTime.sub(block.timestamp);
+        } else {
+            return 0;
+        }
+    }
+
+    function stake(uint256 amount, uint32 duration)
+        external
+        isValidDuration(duration)
+    {
         require(stakings[msg.sender].totalAmount == 0, "Already staked");
 
         trotelToken.transferFrom(msg.sender, address(this), amount);
 
         stakings[msg.sender] = UserStaking({
             totalAmount: amount,
+            startTime: block.timestamp,
+            duration: duration,
             amounts: new uint256[](0),
-            times: new uint256[](0),
-            durations: new uint256[](0),
-            startTime: block.timestamp
+            times: new uint256[](0)
         });
 
         stakings[msg.sender].amounts.push(amount);
         stakings[msg.sender].times.push(block.timestamp);
-        stakings[msg.sender].durations.push(duration);
 
         emit Staked(msg.sender, amount, duration);
     }
@@ -84,6 +108,10 @@ contract TrotelCoinStakingV2 is AccessControl {
     function increaseStaking(uint256 amount) external {
         UserStaking storage userStaking = stakings[msg.sender];
         require(userStaking.totalAmount > 0, "No staking found");
+        require(
+            getUserTimeLeft(msg.sender) > 0,
+            "Staking duration is expired"
+        );
 
         trotelToken.transferFrom(msg.sender, address(this), amount);
 
@@ -91,36 +119,82 @@ contract TrotelCoinStakingV2 is AccessControl {
         userStaking.times.push(block.timestamp);
         userStaking.totalAmount = userStaking.totalAmount.add(amount);
 
-        emit Staked(msg.sender, userStaking.totalAmount, userStaking.durations[userStaking.durations.length - 1]);
+        emit IncreasedStaking(msg.sender, amount);
     }
 
     function unstake() external {
         UserStaking storage userStaking = stakings[msg.sender];
         require(userStaking.totalAmount > 0, "No staking found");
+        require(
+            getUserTimeLeft(msg.sender) == 0,
+            "Staking duration not yet expired"
+        );
 
         uint256 totalReward = 0;
-        uint256 stakingTime = block.timestamp - userStaking.startTime;
         for (uint256 i = 0; i < userStaking.amounts.length; i++) {
-            uint256 duration = userStaking.durations[i];
-            uint256 reward = calculateReward(userStaking.amounts[i], duration, stakingTime);
-            totalReward = totalReward.add(reward);
+            uint256 stakingTime;
+            if (i == userStaking.amounts.length - 1) {
+                stakingTime = block.timestamp - userStaking.times[i];
+            } else {
+                stakingTime = userStaking.times[i + 1] - userStaking.times[i];
+            }
+            totalReward = totalReward.add(
+                calculateReward(
+                    userStaking.amounts[i],
+                    userStaking.duration,
+                    stakingTime
+                )
+            );
         }
 
-        trotelToken.mint(msg.sender, totalReward);
-        trotelToken.transfer(msg.sender, userStaking.totalAmount);
+        uint256 mintAmount = userStaking.totalAmount.add(totalReward);
+
+        trotelToken.mint(msg.sender, mintAmount);
+        trotelToken.burn(userStaking.totalAmount);
 
         emit Unstaked(msg.sender, userStaking.totalAmount, totalReward);
 
         delete stakings[msg.sender];
     }
 
+    function getUserReward(address user) external view returns (uint256) {
+        UserStaking storage userStaking = stakings[user];
+
+        uint256 totalReward = 0;
+        for (uint256 i = 0; i < userStaking.amounts.length; i++) {
+            uint256 stakingTime;
+            if (i == userStaking.amounts.length - 1) {
+                stakingTime = block.timestamp - userStaking.times[i];
+            } else {
+                stakingTime = userStaking.times[i + 1] - userStaking.times[i];
+            }
+            totalReward = totalReward.add(
+                calculateReward(
+                    userStaking.amounts[i],
+                    userStaking.duration,
+                    stakingTime
+                )
+            );
+        }
+        return totalReward;
+    }
+
     function getDurations() external view returns (uint256[] memory) {
         return durations;
     }
 
+    function getMultiplierVotingPower() external view returns (uint256) {
+        return multiplierVotingPower;
+    }
+
+    function changeMultiplierVotingPower(uint256 newMultiplierVotingPower)
+        external
+    {
+        multiplierVotingPower = newMultiplierVotingPower;
+    }
+
     function getVotingPower(address user) external view returns (uint256) {
-        UserStaking storage userStaking = stakings[user];
-        return userStaking.totalAmount.mul(2);
+        return stakings[user].totalAmount.mul(multiplierVotingPower);
     }
 
     function getTokenAddress() external view returns (TrotelCoinV2) {
@@ -128,26 +202,21 @@ contract TrotelCoinStakingV2 is AccessControl {
     }
 
     function getRewards(uint256 duration) external view returns (uint256) {
-        return rewards[duration];
+        return rewards[duration].apr;
     }
 
     function getAllRewards() external view returns (uint256[] memory) {
         uint256[] memory allRewards = new uint256[](durations.length);
-
         for (uint256 i = 0; i < durations.length; i++) {
-            allRewards[i] = rewards[durations[i]];
+            allRewards[i] = rewards[durations[i]].apr;
         }
-
         return allRewards;
     }
 
-    function changeRewards(uint256 duration, uint256 newAPR) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        rewards[duration] = newAPR;
-    }
-
-    function getUserReward(address user) external view returns (uint256) {
-        UserStaking storage userStaking = stakings[user];
-        uint256 reward = calculateReward(userStaking.totalAmount, userStaking.durations[userStaking.durations.length - 1], block.timestamp - userStaking.startTime);
-        return reward;
+    function changeRewards(uint256 duration, uint256 newAPR)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        rewards[duration].apr = newAPR;
     }
 }
