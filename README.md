@@ -6,7 +6,7 @@ The smart contracts are created using Solidity, utilizing the most up-to-date ve
 
 ## License
 
-This TrotelCoin repository is licensed under the [MIT License].
+This TrotelCoin repository is licensed under the MIT License.
 
 ## Contribution
 
