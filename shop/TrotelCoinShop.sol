@@ -26,6 +26,7 @@ contract TrotelCoinShop is
     struct Category {
         string name;
         uint256[] categoryItems;
+        bool disabled;
     }
 
     struct Item {
@@ -34,6 +35,7 @@ contract TrotelCoinShop is
         uint256 discount;
         string emoji;
         string description;
+        bool disabled;
     }
 
     uint256 private totalCategories;
@@ -46,6 +48,7 @@ contract TrotelCoinShop is
     event CategoryAdded(uint256 indexed categoryId, string name);
     event CategoryChanged(uint256 indexed categoryId, string newName);
     event CategoryRemoved(uint256 indexed categoryId);
+    event CategoryEnabled(uint256 indexed categoryId);
     event ItemAddedToCategory(uint256 indexed itemId, uint256 indexed categoryId);
     event ItemRemovedFromCategory(uint256 indexed itemId, uint256 indexed categoryId);
     event ItemAdded(
@@ -57,6 +60,7 @@ contract TrotelCoinShop is
         string description
     );
     event ItemRemoved(uint256 indexed itemId);
+    event ItemEnabled(uint256 indexed itemId);
     event ItemChanged(uint256 indexed itemId,
         string newName,
         uint256 newPrice,
@@ -80,6 +84,8 @@ contract TrotelCoinShop is
         address _tokenFeeAddress,
         address _upgrader
     ) public initializer {
+        require(_feePercentage >= 0 && _feePercentage <= 100, "Fee percentage must be between 0 and 100");
+
         __AccessControl_init();
         __UUPSUpgradeable_init();
 
@@ -99,13 +105,20 @@ contract TrotelCoinShop is
     }
 
     function removeCategory(uint256 _categoryId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_categoryId > 0 && _categoryId <= totalCategories, "Invalid category id");
         require(categories[_categoryId].categoryItems.length == 0, "Category not empty");
-        delete categories[_categoryId];
-        totalCategories--;
+        categories[_categoryId].disabled = true;
         emit CategoryRemoved(_categoryId);
     }
 
+    function enableCategory(uint256 _categoryId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_categoryId > 0 && _categoryId <= totalCategories, "Invalid category id");
+        categories[_categoryId].disabled = false;
+        emit CategoryEnabled(_categoryId);
+    }
+
     function modifyCategory(uint256 _categoryId, string memory _newName) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_categoryId > 0 && _categoryId <= totalCategories, "Invalid category id");
         categories[_categoryId].name = _newName;
         emit CategoryChanged(_categoryId, _newName);
     }
@@ -118,16 +131,16 @@ contract TrotelCoinShop is
         emit ItemAddedToCategory(_itemId, _categoryId);
     }
 
-    function removeItemFromCategory(uint256 _itemId) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        for (uint256 categoryId = 1; categoryId <= totalCategories; categoryId++) {
-            uint256[] storage categoryItems = categories[categoryId].categoryItems;
-            for (uint256 i = 0; i < categoryItems.length; i++) {
-                if (categoryItems[i] == _itemId) {
-                    categoryItems[i] = categoryItems[categoryItems.length - 1];
-                    categoryItems.pop();
-                    emit ItemRemovedFromCategory(_itemId, categoryId);
-                    return;
-                }
+    function removeItemFromCategory(uint256 _itemId, uint256 _categoryId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_categoryId > 0 && _categoryId <= totalCategories, "Invalid category id");
+        uint256[] storage categoryItems = categories[_categoryId].categoryItems;
+
+        for (uint256 i = 0; i < categoryItems.length; i++) {
+            if (categoryItems[i] == _itemId) {
+                categoryItems[i] = categoryItems[categoryItems.length - 1];
+                categoryItems.pop();
+                emit ItemRemovedFromCategory(_itemId, _categoryId);
+                return;
             }
         }
     }
@@ -152,16 +165,21 @@ contract TrotelCoinShop is
         string memory _description
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         totalItems++;
-        items[totalItems] = Item(_name, _price, _discount, _emoji, _description);
+        items[totalItems] = Item(_name, _price, _discount, _emoji, _description, false);
         emit ItemAdded(totalItems, _name, _price, _discount, _emoji, _description);
     }
 
     function removeItem(uint256 _itemId) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_itemId > 0 && _itemId <= totalItems, "Invalid item id");
-        delete items[_itemId];
-        totalItems--;
+        items[_itemId] .disabled = true;
         emit ItemRemoved(_itemId);
     }
+
+    function enableItem (uint256 _itemId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_itemId > 0 && _itemId <= totalItems, "Invalid item id");
+        items[_itemId] .disabled = false;
+        emit ItemEnabled(_itemId);
+    } 
 
     function modifyItem(
         uint256 _itemId,
@@ -257,11 +275,27 @@ contract TrotelCoinShop is
     }
 
     function getTotalCategories() external view returns (uint256) {
-        return totalCategories;
+        uint256 count = 0;
+
+        for (uint256 i = 1; i <= totalCategories; i++) {
+            if (!categories[i].disabled) {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     function getTotalItems() external view returns (uint256) {
-        return totalItems;
+        uint256 count = 0;
+
+        for (uint256 i = 1; i <= totalItems; i++) {
+            if (!items[i].disabled) {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     function getCategoryInformations(uint256 _categoryId) external view returns (Category memory) {
