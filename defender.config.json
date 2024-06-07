@@ -1,0 +1,10 @@
+{
+    "contract_inspector": {
+        "enabled": true,
+        "scan_directories": ["*"],
+        "exclude_rules": ["naming-convention", "unusued-state"]
+    },
+    "dependency_checker": {
+        "enabled": true
+    }
+}
